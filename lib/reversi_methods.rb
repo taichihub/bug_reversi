@@ -23,8 +23,8 @@ module ReversiMethods
       print Position::ROW[i]
       row.each do |cell|
         case cell
-        when WHITE_STONE then print ' ○'
-        when BLACK_STONE then print ' ●'
+        when WHITE_STONE then print ' ●'
+        when BLACK_STONE then print ' ○'
         else print ' -'
         end
       end
@@ -42,34 +42,48 @@ module ReversiMethods
 
   def put_stone(board, cell_ref, stone_color, dry_run: false)
     pos = Position.new(cell_ref)
-    raise '無効なポジションです' if pos.invalid?
-    raise 'すでに石が置かれています' unless pos.stone_color(board) == BLANK_CELL
-
-    # コピーした盤面にて石の配置を試みて、成功すれば反映する
+    
+    if pos.invalid?
+      raise '無効なポジションです' unless dry_run
+      return false
+    end
+  
+    if pos.stone_color(board) != BLANK_CELL
+      raise 'すでに石が置かれています' unless dry_run
+      return false
+    end
+  
     copied_board = Marshal.load(Marshal.dump(board))
-    copied_board[pos.col][pos.row] = stone_color
+    copied_board[pos.row][pos.col] = stone_color
 
     turn_succeed = false
     Position::DIRECTIONS.each do |direction|
       next_pos = pos.next_position(direction)
-      turn_succeed = true if turn(copied_board, next_pos, stone_color, direction)
+      if turn(copied_board, next_pos, stone_color, direction)
+        turn_succeed = true
+      end
     end
 
     copy_board(board, copied_board) if !dry_run && turn_succeed
-
     turn_succeed
   end
-
+  
   def turn(board, target_pos, attack_stone_color, direction)
-    return false if target_pos.out_of_board?
-    return false if target_pos.stone_color(board) == attack_stone_color
+    stones_to_flip = []
+    loop do
+      return false if target_pos.out_of_board? || target_pos.stone_color(board) == BLANK_CELL
+      break if target_pos.stone_color(board) == attack_stone_color
+      stones_to_flip << target_pos
+      target_pos = target_pos.next_position(direction)
+    end
 
-    next_pos = target_pos.next_position(direction)
-    if (next_pos.stone_color(board) == attack_stone_color) || turn(board, next_pos, attack_stone_color, direction)
-      board[target_pos.row][target_pos.col] = attack_stone_color
-      true
-    else
+    if stones_to_flip.empty?
       false
+    else
+      stones_to_flip.each do |pos|
+        board[pos.row][pos.col] = attack_stone_color
+      end
+      true
     end
   end
 
@@ -77,14 +91,12 @@ module ReversiMethods
     !placeable?(board, WHITE_STONE) && !placeable?(board, BLACK_STONE)
   end
 
-  def placeable?(board, attack_stone_color)
-    board.each_with_index do |cols, row|
-      cols.each_with_index do |cell, col|
-        next unless cell == BLANK_CELL
-
-        position = Position.new(row, col)
-        return true if put_stone(board, position.to_cell_ref, attack_stone_color, dry_run: true)
-      end
+  def placeable?(board, stone_color)
+    board.flatten.each_index.any? do |i|
+      row, col = i / board.size, i % board.size
+      next if board[row][col] != BLANK_CELL
+      cell_ref = Position.new(row, col).to_cell_ref
+      put_stone(board, cell_ref, stone_color, dry_run: true)
     end
   end
 
