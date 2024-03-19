@@ -23,8 +23,8 @@ module ReversiMethods
       print Position::ROW[i]
       row.each do |cell|
         case cell
-        when WHITE_STONE then print ' ●'
-        when BLACK_STONE then print ' ○'
+        when WHITE_STONE then print ' ○'
+        when BLACK_STONE then print ' ●'
         else print ' -'
         end
       end
@@ -44,7 +44,7 @@ module ReversiMethods
     pos = Position.new(cell_ref)
     
     if pos.invalid?
-      raise '無効なポジションです' unless dry_run
+      raise '無効なポジションです'
       return false
     end
   
@@ -69,21 +69,17 @@ module ReversiMethods
   end
   
   def turn(board, target_pos, attack_stone_color, direction)
-    stones_to_flip = []
-    loop do
-      return false if target_pos.out_of_board? || target_pos.stone_color(board) == BLANK_CELL
-      break if target_pos.stone_color(board) == attack_stone_color
-      stones_to_flip << target_pos
-      target_pos = target_pos.next_position(direction)
-    end
+    return false if target_pos.out_of_board?
+    return false if target_pos.stone_color(board) == attack_stone_color
+    return false if target_pos.out_of_board? || target_pos.stone_color(board) == BLANK_CELL
+    
+    next_pos = target_pos.next_position(direction)
 
-    if stones_to_flip.empty?
-      false
-    else
-      stones_to_flip.each do |pos|
-        board[pos.row][pos.col] = attack_stone_color
-      end
+    if (next_pos.stone_color(board) == attack_stone_color) || turn(board, next_pos, attack_stone_color, direction)
+      board[target_pos.row][target_pos.col] = attack_stone_color
       true
+    else
+      false
     end
   end
 
@@ -91,13 +87,15 @@ module ReversiMethods
     !placeable?(board, WHITE_STONE) && !placeable?(board, BLACK_STONE)
   end
 
-  def placeable?(board, stone_color)
-    board.flatten.each_index.any? do |i|
-      row, col = i / board.size, i % board.size
-      next if board[row][col] != BLANK_CELL
-      cell_ref = Position.new(row, col).to_cell_ref
-      put_stone(board, cell_ref, stone_color, dry_run: true)
+  def placeable?(board, attack_stone_color)
+    board.each_with_index do |cols, row|
+      cols.each_with_index do |cell, col|
+        next unless cell == BLANK_CELL
+        position = Position.new(row, col)
+        return true if put_stone(board, position.to_cell_ref, attack_stone_color, dry_run: true)
+      end
     end
+    false
   end
 
   def count_stone(board, stone_color)
