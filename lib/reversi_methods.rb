@@ -42,26 +42,13 @@ module ReversiMethods
 
   def put_stone(board, cell_ref, stone_color, dry_run: false)
     pos = Position.new(cell_ref)
-    
-    if pos.invalid?
-      raise '無効なポジションです'
-      return false
-    end
-  
-    if pos.stone_color(board) != BLANK_CELL
-      raise 'すでに石が置かれています' unless dry_run
-      return false
-    end
-  
     copied_board = Marshal.load(Marshal.dump(board))
     copied_board[pos.row][pos.col] = stone_color
 
     turn_succeed = false
     Position::DIRECTIONS.each do |direction|
       next_pos = pos.next_position(direction)
-      if turn(copied_board, next_pos, stone_color, direction)
-        turn_succeed = true
-      end
+      turn_succeed = true if turn(copied_board, next_pos, stone_color, direction)
     end
 
     copy_board(board, copied_board) if !dry_run && turn_succeed
