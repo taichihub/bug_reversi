@@ -54,14 +54,12 @@ module ReversiMethods
     copy_board(board, copied_board) if !dry_run && turn_succeed
     turn_succeed
   end
-  
+
   def turn(board, target_pos, attack_stone_color, direction)
     return false if target_pos.out_of_board?
     return false if target_pos.stone_color(board) == attack_stone_color
     return false if target_pos.out_of_board? || target_pos.stone_color(board) == BLANK_CELL
-    
     next_pos = target_pos.next_position(direction)
-
     if (next_pos.stone_color(board) == attack_stone_color) || turn(board, next_pos, attack_stone_color, direction)
       board[target_pos.row][target_pos.col] = attack_stone_color
       true
@@ -78,6 +76,7 @@ module ReversiMethods
     board.each_with_index do |cols, row|
       cols.each_with_index do |cell, col|
         next unless cell == BLANK_CELL
+
         position = Position.new(row, col)
         return true if put_stone(board, position.to_cell_ref, attack_stone_color, dry_run: true)
       end
